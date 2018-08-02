@@ -2,44 +2,22 @@ import pygame
 import time
 import logic
 import math
+import board
 
 
-class City:
 
-    def __init__(self):
-        self.edges = [] # array of cities
-        self.pop = 25
-        self.loc_x = 0 # coords are for top left corner of image
-        self.loc_y = 0
-        self.owned = False
-        self.selected = False
-        self.upgrade = 0 # 0 = nothing, 1 = capital, 2 = factory, 3 = fort, 4 = artillery
-        self.hash = 0
-
-    def __init__(self, loc_x, loc_y, hash):
-        self.edges = []
-        self.pop = 25
-        self.loc_x = loc_x
-        self.loc_y = loc_y
-        self.owned = False
-        self.selected = False
-        self.upgrade = 0
-        self.hash = hash # a lot depends on this hash being correct, 0 to number of cities - 1
-
-    def increment_pop(self):
-        if not self.owned:
-            return
-
-        if self.upgrade == 1:
-            self.pop += 2
-        elif self.upgrade == 2:
-            self.pop += 3
-        else:
-            self.pop += 1
+def normalize(direction):
+    square = math.sqrt(direction[0] ** 2 + direction[1] ** 2)
+    if square == 0:
+        return direction
+    new_dir = (direction[0] / square, direction[1] / square)
+    return new_dir
 
 
 class Army:
 
+    # eventually have to get multiple constructors to work. for now lets just remove this
+    """
     def __init__(self):
         self.size = 1
         self.loc_x = 0
@@ -52,8 +30,11 @@ class Army:
         self.img_dia = 0
         self.next_city = None
         self.prev_city = None
+    """
 
     def __init__(self, city, size, dest):
+        self.direction = (0, 0)
+        self.next_city = None
         self.path = []
         self.size = size
         self.loc_x = city.loc_x
@@ -91,7 +72,7 @@ class Army:
     def target(self, end_city):
         self.path = logic.find_path(self.path[0], end_city)
         self.next_city = self.path[0]
-        self.direction = (self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y)
+        self.direction = normalize((self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y))
 
     def resize_img(self):
         temp = self.img_dia
@@ -105,12 +86,19 @@ class Army:
         if self.img_dia != temp:
             self.img = pygame.transform.scale(self.img, (self.img_dia, self.img_dia))
 
+    def check_city(self):
+        dist_x = (self.loc_x - self.path[0].loc_x) ** 2
+        dist_y = (self.loc_y - self.path[0].loc_y) ** 2
+        dist = math.sqrt(dist_x + dist_y)
+        if dist <= 5:
+            self.reach_city()
+
     # need to figure out where to put this
     def reach_city(self):
         self.prev_city = self.path[0]
-        self.path.remove(0) # not sure if this is right
+        self.path.pop(0) # not sure if this is right
         self.next_city = self.path[0]
-        self.direction = (self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y)
+        self.direction = normalize((self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y))
 
 
     def stop(self):
@@ -129,21 +117,16 @@ game_display = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('attack-cities')
 
 clock = pygame.time.Clock()
-cities = []
+cities = board.small_test()
 armies = []
-q = City(50, 50, 0)
-q.owned = True
-r = City(300, 300, 1)
-q.edges.append(r)
-r.edges.append(q)
-cities.append(q)
-cities.append(r)
+
 
 city_diameter = 30
 
 city_img = pygame.image.load('neutral_city.jpg')
 city_img = pygame.transform.scale(city_img, (city_diameter, city_diameter))
 big_img = pygame.transform.scale(city_img, (city_diameter + 10, city_diameter + 10))
+army_img = pygame.transform.scale(city_img, (5, 5))
 
 cities_selected = []
 
@@ -172,21 +155,25 @@ def draw_big_selection(city):
 
 
 def draw_armies():
+    size_font = pygame.font.SysFont(None, 15)
     for a in armies:
-        pygame.blit(game_display, a.img)
+        size_text = size_font.render(str(a.size), True, black)
+        game_display.blit(army_img, (a.loc_x, a.loc_y))
+        print(str(a.direction[0]) + " " + str(a.direction[1]))
     return
 
 
 def move_tick_armies():
     for a in armies:
+        a.loc_x += a.direction[0] * army_speed
+        a.loc_y += a.direction[1] * army_speed
+        a.check_city()
         return
 
 
 def create_army(city, size, dest):
-    print("yes")
     if size > city.pop:
         size = city.pop - 1
-
     if size > 0:
         city.pop -= size
         new_army = Army(city, size, dest)
@@ -222,21 +209,29 @@ def increment_pop(array):
 def scroll_left():
     for c in cities:
         c.loc_x += 1
+    for a in armies:
+        a.loc_x += 1
 
 
 def scroll_right():
     for c in cities:
         c.loc_x -= 1
+    for a in armies:
+        a.loc_x -= 1
 
 
 def scroll_up():
     for c in cities:
         c.loc_y += 1
+    for a in armies:
+        a.loc_y += 1
 
 
 def scroll_down():
     for c in cities:
         c.loc_y -= 1
+    for a in armies:
+        a.loc_y -= 1
 
 
 def game_loop():
@@ -336,6 +331,7 @@ def game_loop():
         game_display.fill(white)
         # game_display.blit(pygame.Surface(), (0, 0))
 
+        move_tick_armies()
         draw_cities(cities, curr_pos)
 
         if selecting:

@@ -1,12 +1,9 @@
 
 import math
-
+import board
 
 
 class Path:
-
-    def __init__(self):
-        self.path = []
 
     def __init__(self, city_array):
         self.path = city_array
@@ -15,13 +12,11 @@ class Path:
         self.path.append(city)
 
 
-def get_cities():
-    import attack
-    return attack.cities
+# make a new class called board with City() as a class and then import board on both scripts
 
 
 def find_path(start_city, end_city):
-    cities = get_cities()
+    cities = board.small_test()
     visited = []
     vals = []
     paths = []
@@ -29,7 +24,7 @@ def find_path(start_city, end_city):
     for a in range (0, len(cities)):
         vals.append(float('inf'))
         visited.append(False)
-        paths.append(Path())
+        paths.append(Path([]))
     vals[start_city.hash] = 0
     paths[start_city.hash] = [start_city]
     return dijkstra(start_city, end_city, visited, vals, paths, cities)
@@ -38,7 +33,7 @@ def find_path(start_city, end_city):
 def dijkstra(start_city, end_city, visited, vals, paths, cities):
     # dont like this
     if start_city.hash == end_city.hash:
-        return paths[end_city].hash
+        return paths[end_city.hash].path
     visited[start_city.hash] = True
     for e in start_city.edges:
         if visited[e.hash]:
