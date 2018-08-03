@@ -29,11 +29,15 @@ class City():
 def small_test():
     cities = []
     armies = []
-    q = City(50, 50, 0)
-    q.owned = True
-    r = City(300, 300, 1)
-    q.edges.append(r)
-    r.edges.append(q)
-    cities.append(q)
-    cities.append(r)
+    city1 = City(50, 50, 0)
+    city1.owned = True
+    city2 = City(300, 300, 1)
+    city1.edges.append(city2)
+    city2.edges.append(city1)
+    city3 = City(-150, 300, 2)
+    city1.edges.append(city3)
+    city3.edges.append(city1)
+    cities.append(city1)
+    cities.append(city2)
+    cities.append(city3)
     return cities

@@ -32,6 +32,8 @@ class Army:
     """
 
     def __init__(self, city, size, dest):
+        self.in_battle = False
+        self.in_siege = False
         self.direction = (0, 0)
         self.next_city = None
         self.path = []
@@ -41,19 +43,7 @@ class Army:
         self.path.append(city)
         self.target(dest)
         self.prev_city = city
-
-    # battle with an army
-    def battle(self, enemy):
-        temp = self.size
-        s_multiplier = 1
-        e_multiplier = 1
-        # artillery should provide a multiplier to the damage that an army does, based on the city's population
-        if self.prev_city.upgrade == 4:
-            s_multiplier = math.log10(self.prev_city.pop)
-        if enemy.prev_city.upgrade == 4:
-            e_multiplier = math.log_10(enemy.prev_city.pop)
-        self.size -= math.floor(math.max(0, math.sqrt(enemy.size)) * e_multiplier) # in case i want to reduce the attrition by some amount
-        enemy.size -= math.floor(math.max(0, math.sqrt(temp)) * s_multiplier) # i hope this works
+        self.enemy_army = None
 
     # battle with a city
     def siege(self, enemy):
@@ -62,7 +52,7 @@ class Army:
         e_multiplier = 0
         if self.prev_city.upgrade == 4:
             s_multiplier = math.log10(self.prev_city.pop)
-            # fort should reduce damage by a fixed amount
+            # fort should reduce damage by a fixed amount, good against early rush, bad later
         if enemy.upgrade == 3:
             e_multiplier = 10
         self.size -= math.floor(math.max(0, math.sqrt(enemy.size)))
@@ -96,12 +86,50 @@ class Army:
     def reach_city(self):
         self.prev_city = self.path[0]
         self.path.pop(0) # not sure if this is right
-        self.next_city = self.path[0]
-        self.direction = normalize((self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y))
+        if self.path:
+            self.next_city = self.path[0]
+            self.direction = normalize((self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y))
+        else:
+            if self.prev_city.owned:
+                self.prev_city.pop += self.size
+                self.size = 0
+            else:
+                self.in_siege = True
+                self.siege(self.prev_city)
+
 
 
     def stop(self):
         self.path = self.path[0]
+
+
+class Battle:
+
+    def __init__(self, army1, army2):
+        self.army1 = army1
+        self.army2 = army2
+
+    def attrition_tick(self):
+        temp = self.army1.size
+        a1_multiplier = 1
+        a2_multiplier = 1
+        # artillery should provide a multiplier to the number of enemies killed
+        # scaling off of city size
+        if self.army1.prev_city.upgrade == 4:
+            a1_multiplier = math.log10(self.army1.prev_city.pop)
+        if self.army2.prev_city.upgrade == 4:
+            a2_multiplier = math.log10(self.army2.prev_city.pop)
+        self.army1.size -= math.floor(math.max(0, math.sqrt(self.army2.size)) * a2_multiplier)
+        self.army2.size -= math.floor(math.max(0, math.sqrt(temp)) * a1_multiplier)
+
+
+class Siege:
+
+    def __init__(self, army, city):
+        self.army = army
+        self.city = city
+
+    def attrition_tick(self):
 
 
 pygame.init()
@@ -118,6 +146,8 @@ pygame.display.set_caption('attack-cities')
 clock = pygame.time.Clock()
 cities = board.small_test()
 armies = []
+battles = []
+sieges = []
 
 
 city_diameter = 30
@@ -129,7 +159,7 @@ army_img = pygame.transform.scale(city_img, (5, 5))
 
 cities_selected = []
 
-army_speed = 3 # maybe change army speed based on size?
+army_speed = 1 # maybe change army speed based on size?
 
 
 def draw_selection(city):
@@ -164,10 +194,23 @@ def draw_armies():
 
 def move_tick_armies():
     for a in armies:
-        a.loc_x += a.direction[0] * army_speed
-        a.loc_y += a.direction[1] * army_speed
-        a.check_city()
-        return
+        if a.size <= 0:
+            armies.remove(a)
+        if not a.in_battle and not a.in_siege:
+            a.loc_x += a.direction[0] * army_speed
+            a.loc_y += a.direction[1] * army_speed
+            a.check_city()
+        # might need to do something with army battles here, idk
+
+
+def battle_tick():
+    for b in battles:
+        b.attrition_tick()
+
+
+def siege_tick():
+    for s in sieges:
+        s.attrition_tick()
 
 
 def create_army(city, size, dest):
@@ -331,6 +374,8 @@ def game_loop():
         # game_display.blit(pygame.Surface(), (0, 0))
 
         move_tick_armies()
+        battle_tick()
+        siege_tick()
         draw_cities(cities, curr_pos)
 
         if selecting:
@@ -356,12 +401,6 @@ def game_loop():
         pygame.display.update()
 
         clock.tick(60)
-
-
-
-
-
-
 
 
 game_loop()
