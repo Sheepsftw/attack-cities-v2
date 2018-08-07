@@ -11,6 +11,7 @@ class City():
         self.owned = False
         self.selected = False
         self.upgrade = 0
+        self.in_siege = False
         self.hash = hash  # a lot depends on this hash being correct, 0 to number of cities - 1
 
     def increment_pop(self):

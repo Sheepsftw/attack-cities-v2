@@ -11,22 +11,38 @@ class Path:
     def add(self, city):
         self.path.append(city)
 
+    def to_string(self):
+        ret = ""
+        for c in self.path:
+            ret += str(c.hash) + " "
+        return ret
+
+    def clear(self):
+        self.path.clear()
+
 
 # make a new class called board with City() as a class and then import board on both scripts
 
+def to_string(l):
+    ret = ""
+    for c in l:
+        ret += str(c.hash) + " "
+    return ret
+
 
 def find_path(start_city, end_city):
+    print(end_city.hash)
     cities = board.small_test()
     visited = []
     vals = []
     paths = []
     # really need to find a way to change this
-    for a in range (0, len(cities)):
+    for a in range(0, len(cities)):
         vals.append(float('inf'))
         visited.append(False)
         paths.append(Path([]))
     vals[start_city.hash] = 0
-    paths[start_city.hash] = [start_city]
+    paths[start_city.hash] = Path([start_city])
     return dijkstra(start_city, end_city, visited, vals, paths, cities)
 
 
@@ -41,10 +57,11 @@ def dijkstra(start_city, end_city, visited, vals, paths, cities):
         temp_dist = vals[start_city.hash] + calc_dist(start_city, e)
         if vals[e.hash] > temp_dist:
             vals[e.hash] = temp_dist
-            # uuugh
-            paths[e.hash] = Path(paths[start_city.hash])
+            paths[e.hash].clear()
+            paths[e.hash] = Path(paths[start_city.hash].path)
             paths[e.hash].add(e)
-
+    q = paths[start_city.hash]
+    print(str(start_city.hash) + ": " + q.to_string())
     # find the next closest city to our visited
     lowest_val = float('inf')
     temp = -1

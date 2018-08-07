@@ -44,19 +44,7 @@ class Army:
         self.target(dest)
         self.prev_city = city
         self.enemy_army = None
-
-    # battle with a city
-    def siege(self, enemy):
-        temp = self.size
-        s_multiplier = 1
-        e_multiplier = 0
-        if self.prev_city.upgrade == 4:
-            s_multiplier = math.log10(self.prev_city.pop)
-            # fort should reduce damage by a fixed amount, good against early rush, bad later
-        if enemy.upgrade == 3:
-            e_multiplier = 10
-        self.size -= math.floor(math.max(0, math.sqrt(enemy.size)))
-        enemy.size -= math.floor(math.max(0, math.sqrt(temp) * s_multiplier - e_multiplier))
+        self.owned = True
 
     def target(self, end_city):
         self.path = logic.find_path(self.path[0], end_city)
@@ -84,8 +72,7 @@ class Army:
 
     # need to figure out where to put this
     def reach_city(self):
-        self.prev_city = self.path[0]
-        self.path.pop(0) # not sure if this is right
+        self.prev_city = self.path.pop(0) # not sure if this is right
         if self.path:
             self.next_city = self.path[0]
             self.direction = normalize((self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y))
@@ -93,11 +80,10 @@ class Army:
             if self.prev_city.owned:
                 self.prev_city.pop += self.size
                 self.size = 0
+                armies.remove(self)
             else:
-                self.in_siege = True
-                self.siege(self.prev_city)
-
-
+                self.in_siege = True  # problem: what if unit encounters enemy city on way there?
+                sieges.append(Siege(self, self.prev_city))
 
     def stop(self):
         self.path = self.path[0]
@@ -119,8 +105,24 @@ class Battle:
             a1_multiplier = math.log10(self.army1.prev_city.pop)
         if self.army2.prev_city.upgrade == 4:
             a2_multiplier = math.log10(self.army2.prev_city.pop)
-        self.army1.size -= math.floor(math.max(0, math.sqrt(self.army2.size)) * a2_multiplier)
-        self.army2.size -= math.floor(math.max(0, math.sqrt(temp)) * a1_multiplier)
+        self.army1.size -= math.floor(math.sqrt(self.army2.size) * a2_multiplier)  # gotta make sure armysize > 0
+        self.army2.size -= math.floor(math.sqrt(temp) * a1_multiplier)
+        self.check_victory()
+
+    def check_victory(self):
+        if self.army1.size <= 0:
+            armies.remove(self.army1)
+            if self.army2.size <= 0:
+                armies.remove(self.army2)
+            else:
+                self.army2.in_battle = False
+            battles.remove(self)
+            return
+        if self.army2.size <= 0:
+            armies.remove(self.army2)
+            self.army1.in_battle = False
+            battles.remove(self)
+            return
 
 
 class Siege:
@@ -130,6 +132,30 @@ class Siege:
         self.city = city
 
     def attrition_tick(self):
+        temp = self.army.size
+        a_multiplier = 1
+        c_multiplier = 0
+        # fort should reduce the number of people killed by a flat amount,
+        # good early but bad late
+        if self.army.prev_city.upgrade == 4:
+            a_multiplier = math.log10(self.army.prev_city.pop)
+        if self.city.upgrade == 3:
+            c_multiplier = 10
+        self.army.size -= math.floor(math.sqrt(self.city.pop))
+        self.city.pop -= math.floor(math.sqrt(temp) * a_multiplier - c_multiplier)
+        self.check_victory()
+
+    def check_victory(self):
+        if self.army.size <= 0:
+            armies.remove(self.army)
+            sieges.remove(self)  # ????
+            return
+        if self.city.pop <= 0:
+            self.city.owned = self.army.owned  # will need to change this to a number if (ever) multiplayer
+            self.city.pop = self.army.size
+            armies.remove(self.army)
+            sieges.remove(self)
+
 
 
 pygame.init()
@@ -188,14 +214,14 @@ def draw_armies():
     for a in armies:
         size_text = size_font.render(str(a.size), True, black)
         game_display.blit(army_img, (a.loc_x, a.loc_y))
-        print(str(a.direction[0]) + " " + str(a.direction[1]))
+        game_display.blit(size_text, (a.loc_x - 5, a.loc_y - 5))
     return
 
 
 def move_tick_armies():
     for a in armies:
         if a.size <= 0:
-            armies.remove(a)
+            armies.remove(a) # dont think i need this but just in case
         if not a.in_battle and not a.in_siege:
             a.loc_x += a.direction[0] * army_speed
             a.loc_y += a.direction[1] * army_speed
@@ -308,9 +334,15 @@ def game_loop():
         elif display_height > curr_pos[1] > display_height - 50:
             scroll_down()
 
+        is_hover = False
+
         for c in cities:
             if 0 < curr_pos[0] - c.loc_x < city_diameter and 0 < curr_pos[1] - c.loc_y < city_diameter:
                 hovered = c
+                is_hover = True
+
+        if not is_hover:
+            hovered = None
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -363,19 +395,22 @@ def game_loop():
                         for c in cities_selected:
                             create_army(c, send_r, hovered)
 
-        pop_tick += 1
-        if pop_tick == 60:
-            pop_tick = 0
-            increment_pop(cities)
 
-        # print(select_start[0])
+
+        # print(str(len(sieges)))
 
         game_display.fill(white)
         # game_display.blit(pygame.Surface(), (0, 0))
 
         move_tick_armies()
-        battle_tick()
-        siege_tick()
+
+        pop_tick += 1
+        if pop_tick == 60:
+            pop_tick = 0
+            increment_pop(cities)
+            battle_tick()
+            siege_tick()
+
         draw_cities(cities, curr_pos)
 
         if selecting:
