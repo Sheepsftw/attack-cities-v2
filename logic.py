@@ -23,15 +23,7 @@ class Path:
 
 # make a new class called board with City() as a class and then import board on both scripts
 
-def to_string(l):
-    ret = ""
-    for c in l:
-        ret += str(c.hash) + " "
-    return ret
-
-
 def find_path(start_city, end_city):
-    print(end_city.hash)
     cities = board.small_test()
     visited = []
     vals = []
@@ -46,6 +38,7 @@ def find_path(start_city, end_city):
     return dijkstra(start_city, end_city, visited, vals, paths, cities)
 
 
+# right now cant move from city 2 to city 1 (army sieges/battles nothing?)
 def dijkstra(start_city, end_city, visited, vals, paths, cities):
     # dont like this
     if start_city.hash == end_city.hash:
@@ -58,10 +51,9 @@ def dijkstra(start_city, end_city, visited, vals, paths, cities):
         if vals[e.hash] > temp_dist:
             vals[e.hash] = temp_dist
             paths[e.hash].clear()
-            paths[e.hash] = Path(paths[start_city.hash].path)
-            paths[e.hash].add(e)
-    q = paths[start_city.hash]
-    print(str(start_city.hash) + ": " + q.to_string())
+            temp_path = paths[start_city.hash].path
+            temp_path = temp_path + [e]
+            paths[e.hash] = Path(temp_path)
     # find the next closest city to our visited
     lowest_val = float('inf')
     temp = -1
@@ -75,3 +67,5 @@ def dijkstra(start_city, end_city, visited, vals, paths, cities):
 
 def calc_dist(city1, city2):
     return math.sqrt((city1.loc_x - city2.loc_x) ** 2 + (city1.loc_y - city2.loc_y) ** 2)
+
+

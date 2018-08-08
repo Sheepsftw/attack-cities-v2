@@ -72,7 +72,7 @@ class Army:
 
     # need to figure out where to put this
     def reach_city(self):
-        self.prev_city = self.path.pop(0) # not sure if this is right
+        self.prev_city = self.path.pop(0)  # not sure if this is right
         if self.path:
             self.next_city = self.path[0]
             self.direction = normalize((self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y))
@@ -383,17 +383,21 @@ def game_loop():
                     cities_selected.clear()
                 if in_selection:
                     if event.key == pygame.K_q:
-                        for c in cities_selected:
-                            create_army(c, send_q, hovered)
+                        if hovered is not None:
+                            for c in cities_selected:
+                                create_army(c, send_q, hovered)
                     elif event.key == pygame.K_w:
-                        for c in cities_selected:
-                            create_army(c, send_w, hovered)
+                        if hovered is not None:
+                            for c in cities_selected:
+                                create_army(c, send_w, hovered)
                     elif event.key == pygame.K_e:
-                        for c in cities_selected:
-                            create_army(c, send_e, hovered)
+                        if hovered is not None:
+                            for c in cities_selected:
+                                create_army(c, send_e, hovered)
                     elif event.key == pygame.K_r:
-                        for c in cities_selected:
-                            create_army(c, send_r, hovered)
+                        if hovered is not None:
+                            for c in cities_selected:
+                                create_army(c, send_r, hovered)
 
 
 
