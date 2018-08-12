@@ -47,7 +47,7 @@ class Army:
         self.owned = True
 
     def target(self, end_city):
-        self.path = logic.find_path(self.path[0], end_city)
+        self.path = logic.find_path(self.path[0], end_city, cities)
         self.next_city = self.path[0]
         self.direction = normalize((self.next_city.loc_x - self.loc_x, self.next_city.loc_y - self.loc_y))
 
@@ -365,7 +365,10 @@ def game_loop():
                     min_x = min(select_start[0], curr_pos[0]) # this is dumb
                     min_y = min(select_start[1], curr_pos[1])
                     max_x = max(select_start[0], curr_pos[0])
-                    max_y = max(select_start[0], curr_pos[0])
+                    max_y = max(select_start[1], curr_pos[1])
+                    print(str(min_x) + " " + str(min_y))
+                    print(str(max_x) + " " + str(max_y))
+                    print(str(cities[2].loc_x) + " " + str(cities[2].loc_y))
                     for c in cities:
                         if min_x < c.loc_x < max_x and min_y < c.loc_y < max_y:
                             if c.owned:
@@ -398,7 +401,6 @@ def game_loop():
                         if hovered is not None:
                             for c in cities_selected:
                                 create_army(c, send_r, hovered)
-
 
 
         # print(str(len(sieges)))

@@ -23,8 +23,7 @@ class Path:
 
 # make a new class called board with City() as a class and then import board on both scripts
 
-def find_path(start_city, end_city):
-    cities = board.small_test()
+def find_path(start_city, end_city, cities):
     visited = []
     vals = []
     paths = []
