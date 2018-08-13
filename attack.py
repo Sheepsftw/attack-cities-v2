@@ -362,7 +362,7 @@ def game_loop():
                 if selecting:
                     selecting = False
                     in_selection = True
-                    min_x = min(select_start[0], curr_pos[0]) # this is dumb
+                    min_x = min(select_start[0], curr_pos[0])  # this is dumb
                     min_y = min(select_start[1], curr_pos[1])
                     max_x = max(select_start[0], curr_pos[0])
                     max_y = max(select_start[1], curr_pos[1])
