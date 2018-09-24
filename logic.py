@@ -1,6 +1,6 @@
 
 import math
-import board
+import play_board
 
 
 class Path:

@@ -1,7 +1,7 @@
 
 import logic
-import board
+import play_board
 
-cities = board.small_test()
+cities = play_board.small_test()
 
 logic.find_path(cities[0], cities[1])

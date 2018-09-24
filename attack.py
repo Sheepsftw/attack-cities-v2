@@ -1,8 +1,7 @@
 import pygame
 import logic
 import math
-import board
-
+import play_board
 
 
 def normalize(direction):
@@ -44,7 +43,7 @@ class Army:
         self.target(dest)
         self.prev_city = city
         self.enemy_army = None
-        self.owned = True
+        self.owner = 1
 
     def target(self, end_city):
         self.path = logic.find_path(self.path[0], end_city, cities)
@@ -87,6 +86,11 @@ class Army:
 
     def stop(self):
         self.path = self.path[0]
+
+    def to_string(self):
+        # single-double quote consistency!
+        s = "army"
+        return s
 
 
 class Battle:
@@ -157,7 +161,6 @@ class Siege:
             sieges.remove(self)
 
 
-
 pygame.init()
 
 black = (0, 0, 0)
@@ -170,7 +173,7 @@ game_display = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('attack-cities')
 
 clock = pygame.time.Clock()
-cities = board.small_test()
+cities = play_board.small_test()
 armies = []
 battles = []
 sieges = []
@@ -185,12 +188,15 @@ army_img = pygame.transform.scale(city_img, (5, 5))
 
 cities_selected = []
 
-army_speed = 1 # maybe change army speed based on size?
+scroll_x = 0
+scroll_y = 0
+
+army_speed = 1  # maybe change army speed based on size?
 
 
 def draw_selection(city):
-    city_x = city.loc_x
-    city_y = city.loc_y
+    city_x = city.loc_x + scroll_x
+    city_y = city.loc_y + scroll_y
     right_x = city_x + city_diameter
     right_y = city_y + city_diameter
     # sorry wtf?
@@ -213,8 +219,8 @@ def draw_armies():
     size_font = pygame.font.SysFont(None, 15)
     for a in armies:
         size_text = size_font.render(str(a.size), True, black)
-        game_display.blit(army_img, (a.loc_x, a.loc_y))
-        game_display.blit(size_text, (a.loc_x - 5, a.loc_y - 5))
+        game_display.blit(army_img, (a.loc_x + scroll_x, a.loc_y + scroll_y))
+        game_display.blit(size_text, (a.loc_x - 5 + scroll_x, a.loc_y - 5 + scroll_y))
     return
 
 
@@ -252,18 +258,21 @@ def draw_cities(array, curr_pos):
     pop_font = pygame.font.SysFont(None, 15)
     for c in array:
         pop_text = pop_font.render(str(c.pop), True, black)
-
-        if 0 < curr_pos[0] - c.loc_x < city_diameter and 0 < curr_pos[1] - c.loc_y < city_diameter:
-            game_display.blit(big_img, (c.loc_x - 5, c.loc_y - 5))
-            game_display.blit(pop_text, (c.loc_x - 5, c.loc_y - 15))  # draw the population of the city
+        city_x = c.loc_x + scroll_x
+        city_y = c.loc_y + scroll_y
+        if 0 < curr_pos[0] - city_x < city_diameter and 0 < curr_pos[1] - city_y < city_diameter:
+            game_display.blit(big_img, (city_x - 5, city_y - 5))
+            game_display.blit(pop_text, (city_x - 5, city_y - 15))  # draw the population of the city
         else:
-            game_display.blit(city_img, (c.loc_x, c.loc_y)) # draw the city
-            game_display.blit(pop_text, (c.loc_x, c.loc_y - 10))  # draw the population of the city
+            game_display.blit(city_img, (city_x, city_y)) # draw the city
+            game_display.blit(pop_text, (city_x, city_y - 10))  # draw the population of the city
         for e in c.edges:
-            pygame.draw.line(game_display, black, (c.loc_x + city_diameter / 2, c.loc_y + city_diameter / 2),
-                                                    (e.loc_x + city_diameter / 2, e.loc_y + city_diameter / 2)) # draw all roads to the city, fix coords issue
+            # draw all roads to the city, coordinate issue fixed
+            pygame.draw.line(game_display, black, (city_x + city_diameter / 2, city_y + city_diameter / 2),
+                            (e.loc_x + scroll_x + city_diameter / 2, e.loc_y + scroll_y + city_diameter / 2))
+
         if c.selected:
-            draw_selection(c) # if the city is selected, show it
+            draw_selection(c)  # if the city is selected, show it
 
     draw_armies()
     return
@@ -275,31 +284,23 @@ def increment_pop(array):
 
 
 def scroll_left():
-    for c in cities:
-        c.loc_x += 1
-    for a in armies:
-        a.loc_x += 1
+    global scroll_x
+    scroll_x += 1
 
 
 def scroll_right():
-    for c in cities:
-        c.loc_x -= 1
-    for a in armies:
-        a.loc_x -= 1
+    global scroll_x
+    scroll_x -= 1
 
 
 def scroll_up():
-    for c in cities:
-        c.loc_y += 1
-    for a in armies:
-        a.loc_y += 1
+    global scroll_y
+    scroll_y += 1
 
 
 def scroll_down():
-    for c in cities:
-        c.loc_y -= 1
-    for a in armies:
-        a.loc_y -= 1
+    global scroll_y
+    scroll_y -= 1
 
 
 def game_loop():
@@ -320,7 +321,6 @@ def game_loop():
     hovered = None
 
     while not game_finished:
-
         curr_pos = pygame.mouse.get_pos()
 
         # figure out a way to scroll
